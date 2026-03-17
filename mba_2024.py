@@ -252,8 +252,18 @@ def download_csvs_and_move_to_processed(
     transport = None
     sftp = None
     try:
+        if not str(username).strip() or not str(password).strip():
+            raise ValueError(
+                "SFTP credentials are missing. Ensure SFTP_USERNAME and SFTP_PASSWORD are set."
+            )
         transport = paramiko.Transport((host, port))
-        transport.connect(username=username, password=password)
+        try:
+            transport.connect(username=username, password=password)
+        except paramiko.ssh_exception.AuthenticationException as ex:
+            raise RuntimeError(
+                f"SFTP authentication failed for host={host}, port={port}, username={username!r}. "
+                "Verify SFTP_USERNAME/SFTP_PASSWORD (and whether the server requires SSH keys)."
+            ) from ex
         sftp = paramiko.SFTPClient.from_transport(transport)
 
         for entry in sftp.listdir_attr(order_folder):
@@ -301,8 +311,18 @@ def upload_file(
         transport = None
         sftp = None
         try:
+            if not str(username).strip() or not str(password).strip():
+                raise ValueError(
+                    "SFTP credentials are missing. Ensure SFTP_USERNAME and SFTP_PASSWORD are set."
+                )
             transport = paramiko.Transport((host, port))
-            transport.connect(username=username, password=password)
+            try:
+                transport.connect(username=username, password=password)
+            except paramiko.ssh_exception.AuthenticationException as ex:
+                raise RuntimeError(
+                    f"SFTP authentication failed for host={host}, port={port}, username={username!r}. "
+                    "Verify SFTP_USERNAME/SFTP_PASSWORD (and whether the server requires SSH keys)."
+                ) from ex
             sftp = paramiko.SFTPClient.from_transport(transport)
 
             _ensure_remote_dir(sftp, sftp_directory)
@@ -1351,6 +1371,7 @@ def run(argv: list[str] | None = None) -> None:
             processed_folder=SFTP_PROCESSED_FOLDER,
             local_folder=temp_folder,
         )
+        
         if len(downloaded_csvs) == 0:
             subject = "No CSV Files Found on SFTP Server"
             body = """
@@ -1364,8 +1385,10 @@ Weblegs Support Team</p>
 </body>
 </html>
 """
-            send_notification_email(settings.base_dir, None, body, subject)
-            log("No CSV files found on SFTP. Notification email sent.")
+            if send_notification_email(settings.base_dir, None, body, subject):
+                log("No CSV files found on SFTP. Notification email sent.")
+            else:
+                log_error("No CSV files found on SFTP. Notification email could not be sent (Gmail not configured).")
 
         # Build in-memory jobs from CSVs.
         jobs = build_jobs_from_csvs(downloaded_csvs, settings.test_mode)
