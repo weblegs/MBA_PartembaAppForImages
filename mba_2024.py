@@ -948,7 +948,26 @@ def initialize_gmail_service(base_dir: Path):
     token_override = settings.get("GMAIL_TOKEN_PATH")
     if token_override:
         # Use the existing C# token file without creating a new token.json.
+        # Accept either:
+        # - direct file path (recommended), or
+        # - a directory containing `Google.Apis.Auth.OAuth2.Responses.TokenResponse-*`
         token_path = Path(str(token_override))
+        if token_path.exists() and token_path.is_dir():
+            matches = sorted(
+                [
+                    p
+                    for p in token_path.iterdir()
+                    if p.is_file()
+                    and p.name.startswith("Google.Apis.Auth.OAuth2.Responses.TokenResponse")
+                ]
+            )
+            if not matches:
+                raise FileNotFoundError(
+                    f"Gmail token path is a directory with no TokenResponse file: {token_path}. "
+                    "Set GMAIL_TOKEN_PATH to the token file, e.g. "
+                    f"{token_path}/Google.Apis.Auth.OAuth2.Responses.TokenResponse-user"
+                )
+            token_path = matches[0]
         creds = _creds_from_csharp_token(cred_path, token_path)
     else:
         # Standard Python flow using token.json next to the script.
@@ -956,6 +975,11 @@ def initialize_gmail_service(base_dir: Path):
         token_path.parent.mkdir(parents=True, exist_ok=True)
 
         creds: Credentials | None = None
+        if token_path.exists() and token_path.is_dir():
+            raise RuntimeError(
+                f"Gmail token path is a directory, expected a file: {token_path}. "
+                "Delete/rename the directory or set GMAIL_TOKEN_PATH to a token file."
+            )
         if token_path.exists():
             creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
         if not creds or not creds.valid:
