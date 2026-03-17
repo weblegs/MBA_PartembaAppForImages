@@ -1,0 +1,12 @@
+.env
+*.log
+Logs/
+Temp/
+output/
+*.png
+*.csv
+credentials.json
+token.json
+token.json/**
+Credentials/899682_cpzawshm_config.json
+/Credentials
