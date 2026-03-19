@@ -83,7 +83,11 @@ function _cleanupWorkingDirectories() {
       if (stat.isFile()) fs.unlinkSync(p);
       else if (stat.isDirectory()) fs.rmSync(p, { recursive: true, force: true });
     } catch (ex) {
-      logError(`Error cleaning working path '${p}': ${ex}`).catch(() => {});
+      if (ex.code === 'ENOENT') {
+        logError(`No files to clean at '${p}'`).catch(() => {});
+      } else {
+        logError(`Error cleaning working path '${p}': ${ex}`).catch(() => {});
+      }
     }
   }
 }
