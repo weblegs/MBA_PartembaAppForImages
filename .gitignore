@@ -1,8 +1,10 @@
+node_modules/
 .env
 *.log
 Logs/
 Temp/
 output/
+Boxlog.txt
 *.png
 *.csv
 
