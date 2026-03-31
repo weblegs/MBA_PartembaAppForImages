@@ -130,8 +130,8 @@ async function placeOnCanvas(inputBuffer, canvasWidth, canvasHeight, margin = 30
     }
   }
 
-  const newW = Math.max(1, Math.round(maxW));
-  const newH = Math.max(1, Math.round(maxH));
+  const newW = Math.max(1, Math.min(cw, Math.round(maxW)));
+  const newH = Math.max(1, Math.min(ch, Math.round(maxH)));
 
   const resized = await sharp(inputBuffer)
     .resize(newW, newH, { fit: 'fill', kernel: 'lanczos3' })
@@ -139,8 +139,8 @@ async function placeOnCanvas(inputBuffer, canvasWidth, canvasHeight, margin = 30
     .toBuffer();
 
   const availW = cw - 2 * sideMarg;
-  const x = Math.round(sideMarg + (availW - newW) / 2.0);
-  const y = Math.round(topMarg);
+  const x = Math.max(0, Math.min(cw - newW, Math.round(sideMarg + (availW - newW) / 2.0)));
+  const y = Math.max(0, Math.min(ch - newH, Math.round(topMarg)));
 
   return sharp({
     create: {
